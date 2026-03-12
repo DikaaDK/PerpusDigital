@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\Buku;
+use App\Models\UlasanBuku;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
@@ -16,11 +18,19 @@ class BukuController extends Controller
         /** @var User|null $user */
         $user = Auth::user();
 
-        $books = Buku::withCount('likedBy')->orderBy('Judul')->get();
+        $books = Buku::withCount('likedBy')
+            ->withAvg('reviews', 'Rating')
+            ->withCount('reviews')
+            ->orderBy('Judul')
+            ->get();
         $canManage = $user && in_array($user->role, ['admin', 'petugas'], true);
         $likedBookIds = $user?->likedBooks()->pluck('BukuID')->toArray() ?? [];
+        $recentReviews = UlasanBuku::with(['user', 'buku'])
+            ->orderByDesc('UlasanID')
+            ->take(6)
+            ->get();
 
-        return view('pages.daftarBuku', compact('books', 'canManage', 'likedBookIds'));
+        return view('pages.daftarBuku', compact('books', 'canManage', 'likedBookIds', 'recentReviews'));
     }
 
     public function store(Request $request)
@@ -66,5 +76,49 @@ class BukuController extends Controller
             : collect();
 
         return view('pages.bukuDisukai', compact('likedBooks'));
+    }
+
+    public function storeReview(Request $request, Buku $buku): RedirectResponse
+    {
+        /** @var User|null $user */
+        $user = Auth::user();
+
+        abort_unless($user && $user->role === 'peminjam', 403, 'Hanya peminjam yang bisa mengulas.');
+
+        $validated = $request->validate([
+            'rating' => ['required', 'integer', 'between:1,5'],
+            'ulasan' => ['required', 'string', 'max:500'],
+        ]);
+
+        UlasanBuku::create([
+            'UserID' => $user->id,
+            'BukuID' => $buku->BukuID,
+            'Ulasan' => $validated['ulasan'],
+            'Rating' => $validated['rating'],
+        ]);
+
+        return redirect()
+            ->route('daftar-buku')
+            ->with('success', 'Terima kasih, ulasan Anda tersimpan.');
+    }
+
+    public function destroy(Buku $buku)
+    {
+        $user = Auth::user();
+
+        if (! in_array($user?->role, ['admin', 'petugas'], true)) {
+            abort(403);
+        }
+
+        if ($buku->Cover) {
+            $relativePath = str_replace('/storage/', '', $buku->Cover);
+            Storage::disk('public')->delete($relativePath);
+        }
+
+        $buku->delete();
+
+        return redirect()
+            ->route('daftar-buku')
+            ->with('success', 'Buku berhasil dihapus.');
     }
 }

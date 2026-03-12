@@ -31,6 +31,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/users', [UserController::class, 'store'])->name('users.store');
     Route::get('/daftar-buku', [BukuController::class, 'index'])->name('daftar-buku');
     Route::post('/daftar-buku', [BukuController::class, 'store']);
+    Route::post('/buku/{buku}/ulasan', [BukuController::class, 'storeReview'])->name('buku.ulasan.store');
     Route::delete('/buku/{buku}', [BukuController::class, 'destroy'])->name('buku.destroy');
     Route::post('/buku/{buku}/like', [BukuLikeController::class, 'store'])->name('buku.like.store');
     Route::delete('/buku/{buku}/like', [BukuLikeController::class, 'destroy'])->name('buku.like.destroy');

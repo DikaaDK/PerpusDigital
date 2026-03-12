@@ -147,5 +147,36 @@
                 </form>
             </section>
         </div>
+
+        <section class="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-xs uppercase tracking-[0.3em] text-stone-500">ulasan terbaru</p>
+                    <h2 class="text-xl font-semibold text-stone-900">Masukan dari peminjam</h2>
+                    <p class="text-sm text-stone-500">Menampilkan {{ $reviews->count() }} ulasan terakhir dari pengguna.</p>
+                </div>
+            </div>
+
+            <div class="mt-6 space-y-5">
+                @forelse ($reviews as $review)
+                    <article class="rounded-2xl border border-stone-100 bg-stone-50/40 p-4 shadow-sm">
+                        <div class="flex flex-wrap items-center justify-between gap-3">
+                            <div>
+                                <p class="text-sm font-semibold text-stone-900">{{ $review->buku?->Judul ?? 'Buku sudah dihapus' }}</p>
+                                <p class="text-xs text-stone-500">oleh {{ $review->user?->namaLengkap ?? 'Pengguna tidak ditemukan' }}</p>
+                            </div>
+                            <div class="rounded-full bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-stone-600">
+                                Rating {{ $review->Rating }}/5
+                            </div>
+                        </div>
+                        <p class="mt-3 text-sm text-stone-700">{{ \Illuminate\Support\Str::limit($review->Ulasan, 140, '...') }}</p>
+                    </article>
+                @empty
+                    <div class="rounded-2xl border border-stone-100 bg-stone-50/40 p-4 text-sm text-stone-500">
+                        Belum ada ulasan yang bisa ditampilkan.
+                    </div>
+                @endforelse
+            </div>
+        </section>
     </div>
 @endsection

@@ -6,6 +6,7 @@
     @php
         $canManage = $canManage ?? false;
         $likedBookIds = $likedBookIds ?? [];
+        $recentReviews = $recentReviews ?? collect();
     @endphp
 
     <div class="flex flex-col gap-6">
@@ -98,6 +99,61 @@
                                     @endif
                                 </div>
                             </div>
+
+                            <div class="border-t border-stone-100 pt-3">
+                                <div class="flex items-center justify-between text-xs text-stone-500">
+                                    <div class="flex items-center gap-1">
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="h-4 w-4 text-amber-500">
+                                            <path fill="currentColor" d="M12 17.75l-6.18 3.25 1.18-6.88-5-4.87 6.9-1 3.1-6.28 3.1 6.28 6.9 1-5 4.87 1.18 6.88z" />
+                                        </svg>
+                                        <span class="font-semibold text-stone-900">{{ $book->reviews_avg_rating ? number_format($book->reviews_avg_rating, 1) : '0.0' }}</span>
+                                        <span class="text-stone-400">({{ $book->reviews_count ?: 0 }} ulasan)</span>
+                                    </div>
+                                </div>
+
+                                @if (auth()->user()?->role === 'peminjam')
+                                    @php
+                                        $isReviewing = old('book_id') == $book->BukuID;
+                                        $selectedRating = $isReviewing ? old('rating', 0) : 0;
+                                        $reviewText = $isReviewing ? old('ulasan', '') : '';
+                                    @endphp
+                                    <details class="mt-2 rounded-2xl border border-stone-100 bg-stone-50/80" @if ($isReviewing) open @endif>
+                                        <summary class="flex cursor-pointer items-center justify-between p-3 text-xs font-semibold text-blue-600 transition">
+                                            <span>Tambah ulasan & rating</span>
+                                            <span class="text-[10px] text-stone-400">⌄</span>
+                                        </summary>
+                                        <form class="space-y-3 px-3 pb-4 pt-1" method="POST" action="{{ route('buku.ulasan.store', $book->BukuID) }}">
+                                            @csrf
+                                            <input type="hidden" name="book_id" value="{{ $book->BukuID }}">
+                                            <div class="flex items-center gap-1 text-amber-500">
+                                                @for ($i = 1; $i <= 5; $i++)
+                                                    <label for="rating-{{ $book->BukuID }}-{{ $i }}" class="cursor-pointer text-lg {{ $selectedRating >= $i ? 'text-amber-500' : 'text-stone-200' }}">
+                                                        <input id="rating-{{ $book->BukuID }}-{{ $i }}" type="radio" name="rating" value="{{ $i }}" class="sr-only" {{ $i === 1 ? 'required' : '' }}>
+                                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="h-5 w-5 fill-current">
+                                                            <path d="M12 17.75l-6.18 3.25 1.18-6.88-5-4.87 6.9-1 3.1-6.28 3.1 6.28 6.9 1-5 4.87 1.18 6.88z" />
+                                                        </svg>
+                                                    </label>
+                                                @endfor
+                                            </div>
+                                            @error('rating')
+                                                <p class="text-xs text-red-600">{{ $message }}</p>
+                                            @enderror
+                                            <textarea
+                                                name="ulasan"
+                                                rows="3"
+                                                required
+                                                class="w-full rounded-2xl border border-stone-200 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                                            >{{ $reviewText }}</textarea>
+                                            @error('ulasan')
+                                                <p class="text-xs text-red-600">{{ $message }}</p>
+                                            @enderror
+                                            <button type="submit" class="w-full rounded-2xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700">
+                                                Kirim ulasan
+                                            </button>
+                                        </form>
+                                    </details>
+                                @endif
+                            </div>
                         </article>
                     @empty
                         <p class="rounded-2xl border border-dashed border-stone-200 bg-white/60 p-5 text-sm text-stone-500">
@@ -105,6 +161,36 @@
                         </p>
                     @endforelse
                 </div>
+            </div>
+        </section>
+
+        <section class="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-xs text-stone-500">ulasan</p>
+                    <h2 class="text-xl font-semibold text-stone-900">Suara peminjam</h2>
+                </div>
+                <span class="text-xs text-stone-500">{{ $recentReviews->count() }} catatan terkini</span>
+            </div>
+            <div class="mt-5 grid gap-4 md:grid-cols-2">
+                @forelse ($recentReviews as $review)
+                    <article class="rounded-2xl border border-stone-100 bg-stone-50/70 p-4 shadow-sm">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-semibold text-stone-900">{{ $review->buku?->Judul ?? 'Buku tidak ditemukan' }}</p>
+                                <p class="text-xs text-stone-500">{{ $review->user?->namaLengkap ?? 'Anonim' }}</p>
+                            </div>
+                            <span class="rounded-full bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-stone-600">
+                                Rating {{ $review->Rating }}/5
+                            </span>
+                        </div>
+                        <p class="mt-3 text-sm text-stone-700">{{ \Illuminate\Support\Str::limit($review->Ulasan, 140, '...') }}</p>
+                    </article>
+                @empty
+                    <div class="rounded-2xl border border-dashed border-stone-200 bg-stone-50/60 p-4 text-sm text-stone-500">
+                        Belum ada ulasan terbaru.
+                    </div>
+                @endforelse
             </div>
         </section>
     </div>

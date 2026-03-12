@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Models\UlasanBuku;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
@@ -23,8 +24,12 @@ class UserController extends Controller
         $this->authorizeAdmin();
 
         $users = User::orderByDesc('created_at')->get();
+        $reviews = UlasanBuku::with(['user', 'buku'])
+            ->orderByDesc('UlasanID')
+            ->take(8)
+            ->get();
 
-        return view('pages.users', compact('users'));
+        return view('pages.users', compact('users', 'reviews'));
     }
 
     public function store(Request $request): RedirectResponse
