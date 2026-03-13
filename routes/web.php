@@ -40,4 +40,5 @@ Route::middleware('auth')->group(function () {
     Route::post('/peminjaman', [PeminjamanController::class, 'store'])->name('peminjaman.store');
     Route::patch('/peminjaman/{peminjaman}/complete', [PeminjamanController::class, 'complete'])->name('peminjaman.complete');
     Route::get('/riwayat-peminjaman', [PeminjamanController::class, 'history'])->name('riwayat-peminjaman');
+    Route::get('/riwayat-peminjaman/export', [PeminjamanController::class, 'exportHistory'])->name('riwayat-peminjaman.export');
 });

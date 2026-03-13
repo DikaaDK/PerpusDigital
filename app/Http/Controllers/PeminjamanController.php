@@ -5,10 +5,12 @@ namespace App\Http\Controllers;
 use App\Models\Buku;
 use App\Models\Peminjaman;
 use App\Models\User;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class PeminjamanController extends Controller
 {
@@ -119,6 +121,25 @@ class PeminjamanController extends Controller
             ->get();
 
         return view('pages.riwayatPeminjaman', compact('history'));
+    }
+
+    public function exportHistory(): BinaryFileResponse
+    {
+        /** @var User|null $user */
+        $user = Auth::user();
+
+        $history = Peminjaman::with(['buku', 'user'])
+            ->where('StatusPeminjaman', 'Selesai')
+            ->when($user?->role === 'peminjam', fn ($query) => $query->where('UserID', $user->id))
+            ->orderByDesc('TanggalPengembalian')
+            ->get();
+
+        $filename = 'riwayat-peminjaman-' . now()->format('YmdHis') . '.pdf';
+
+        $pdf = Pdf::loadView('pdf.riwayatPeminjaman', compact('history'))
+            ->setPaper('a4', 'portrait');
+
+        return $pdf->download($filename);
     }
 
     private function isManager(User $user): bool

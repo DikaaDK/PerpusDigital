@@ -11,9 +11,6 @@
                 <br>
                 <h2 class="text-sm font-semibold text-stone-900">Total koleksi: {{ $likedBooks->count() }}</h2>
             </div>
-            <button class="rounded-full border border-stone-200 bg-white px-4 py-2 text-sm  text-stone-700 hover:border-blue-500 hover:text-blue-700 transition">
-                Ekspor Daftar
-            </button>
         </header>
 
         @if (session('success'))
