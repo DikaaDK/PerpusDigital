@@ -5,12 +5,11 @@ namespace App\Http\Controllers;
 use App\Models\Buku;
 use App\Models\Peminjaman;
 use App\Models\User;
-use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
-use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class PeminjamanController extends Controller
 {
@@ -123,7 +122,7 @@ class PeminjamanController extends Controller
         return view('pages.riwayatPeminjaman', compact('history'));
     }
 
-    public function exportHistory(): BinaryFileResponse
+    public function exportHistory(): StreamedResponse
     {
         /** @var User|null $user */
         $user = Auth::user();
@@ -134,12 +133,31 @@ class PeminjamanController extends Controller
             ->orderByDesc('TanggalPengembalian')
             ->get();
 
-        $filename = 'riwayat-peminjaman-' . now()->format('YmdHis') . '.pdf';
+        $filename = 'riwayat-peminjaman-' . now()->format('YmdHis') . '.csv';
 
-        $pdf = Pdf::loadView('pdf.riwayatPeminjaman', compact('history'))
-            ->setPaper('a4', 'portrait');
+        $callback = function () use ($history) {
+            $handle = fopen('php://output', 'w');
+            fputcsv($handle, ['ID Peminjaman', 'Judul Buku', 'Peminjam', 'Tanggal Pinjam', 'Tanggal Kembali', 'Status']);
 
-        return $pdf->download($filename);
+            foreach ($history as $loan) {
+                fputcsv($handle, [
+                    $loan->PeminjamanID,
+                    $loan->buku->Judul,
+                    $loan->user->namaLengkap ?? $loan->user->username,
+                    $loan->TanggalPeminjaman,
+                    $loan->TanggalPengembalian,
+                    $loan->StatusPeminjaman,
+                ]);
+            }
+
+            fclose($handle);
+        };
+
+        return response()->streamDownload($callback, $filename, [
+            'Content-Type' => 'text/csv; charset=utf-8',
+            'Pragma' => 'no-cache',
+            'Cache-Control' => 'must-revalidate, post-check=0, pre-check=0',
+        ]);
     }
 
     private function isManager(User $user): bool
